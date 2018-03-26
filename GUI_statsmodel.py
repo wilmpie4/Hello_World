@@ -22,7 +22,7 @@ class GUI(qw.QMainWindow):
     # Add cls Variables here
     # ----------------------------------
     cnxn = odbc.connect("Driver={SQL Server Native Client 11.0};"
-                        "Server=############;"
+                        "Server=DESKTOP-D3UL9SD;"
                         "Database=Statistics;"
                         "Trusted_Connection=yes;")
 
@@ -100,6 +100,7 @@ class GUI(qw.QMainWindow):
 
     # adding table to mainwindow
     # ----------------------------------
+        '''nothing yet '''
         m = Canvas(self,width=5, height=4, dpi=100 )
         m.move(540,55)
     
