@@ -22,7 +22,7 @@ class GUI(qw.QMainWindow):
     # Add cls Variables here
     # ----------------------------------
     cnxn = odbc.connect("Driver={SQL Server Native Client 11.0};"
-                        "Server=DESKTOP-D3UL9SD;"
+                        "Server=############;"
                         "Database=Statistics;"
                         "Trusted_Connection=yes;")
 
