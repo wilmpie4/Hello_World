@@ -1,23 +1,32 @@
+    # imported classes for widget
+    # ----------------------------------
 import sys
 from PyQt5 import QtWidgets as qw
 from PyQt5 import QtGui as qg
 from PyQt5 import QtCore as qc
-import pyodbc as odbc
 
+    # imported classes for data
+    # ----------------------------------
+import pyodbc as odbc
 import pandas as pd
 
+    # imported classes for plotting
+    # ----------------------------------
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
+
+
+# ------------------------------------------------- APPLICATION ------------------------------------------------- #
 class GUI(qw.QMainWindow):
 
     # Add cls Variables here
     # ----------------------------------
     cnxn = odbc.connect("Driver={SQL Server Native Client 11.0};"
-                        "Server=DESKTOP-D3UL9SD;"
+                        "Server=############;"
                         "Database=Statistics;"
                         "Trusted_Connection=yes;")
 
-    sql_tb = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_CATALOG = 'Statistics'"
-
-    
+    sql_tb = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_CATALOG = 'Statistics'" 
     # ----------------------------------
 
     # Main application + start app
@@ -38,11 +47,10 @@ class GUI(qw.QMainWindow):
         self.setGeometry(self.top,self.left,self.width,self.height)
         self.initUI()
 
-    # ----------------------------------
-
     # Added items to main window
     # ----------------------------------
     def initUI(self):
+
     # main menu
     # ----------------------------------
         menubar = self.menuBar()
@@ -90,6 +98,12 @@ class GUI(qw.QMainWindow):
         self.table.setColumnCount(5)
         self.table.setGeometry(qc.QRect(20,55,500,450))
 
+    # adding table to mainwindow
+    # ----------------------------------
+        m = Canvas(self,width=5, height=4, dpi=100 )
+        m.move(540,55)
+    
+
     # adding dropdown with table in database
     # ----------------------------------
         self.db_label = qw.QLabel(self)
@@ -98,6 +112,7 @@ class GUI(qw.QMainWindow):
 
         self.qboxtable = qw.QComboBox(self)
         self.qboxtable.move(100,22)
+        self.qboxtable.activated[str].connect(self.download_file)
 
     # visualizing GUI
     # ----------------------------------
@@ -136,6 +151,9 @@ class GUI(qw.QMainWindow):
                     if str(j) != 'nan':
                         newitem = qw.QTableWidgetItem(str(j))
                         self.table.setItem(row, column, newitem)
+                    else:
+                        empty = qw.QTableWidgetItem('')
+                        self.table.setItem(row, column, empty)
                     row = row + 1
                 column = column + 1
                     
@@ -163,35 +181,74 @@ class GUI(qw.QMainWindow):
         self.fill_qboxtable()
 
         for i in range(self.table.columnCount()):
-            i = i + 1
             cl_name = str(self.table.horizontalHeaderItem(i).text())
             sql_cl = "Alter table [" + tb_name + "] Add [" + cl_name + "] varchar(255)"
             cursor.execute(str(sql_cl))
             cursor.commit()
-        
+
+        for i in range(self.table.rowCount()):
+            sql_in = "insert into " + tb_name + "(index_column) values (" + str(i) + ")"
+            cursor.execute(str(sql_in))
+            cursor.commit()
+
         for i in range(self.table.columnCount()):
             for j in range(self.table.rowCount()):
                 cl_name = str(self.table.horizontalHeaderItem(i).text())
-                item = self.table.item(i,j)
-                if str(item) != 'None':
-                    print(item)
-                    print(item.text())
-                    print(cl_name)
+                item = self.table.item(j,i).text()
+                sql_it = "Update [" + tb_name + "] set [" + cl_name + "] = " + "'" +   item +  "' where index_column = " + str(j)
+                cursor.execute(str(sql_it))
+                cursor.commit()
 
     # Download File
     # ----------------------------------
-    def download_file(self):
-        print('Nothing yet')
+    def download_file(self, tb_name):
+        sql_re = 'Select * from ' + tb_name
+        df_sql = pd.read_sql(sql_re, GUI.cnxn)
 
-    
+        column_header = list(df_sql.columns)
+        column = 0
+        self.table.setColumnCount(df_sql.shape[1]) 
+        self.table.setRowCount(df_sql.shape[0]) 
+        for i in column_header:
+            row = 0
+            for j in df_sql[i]:
+                if str(j) != 'nan':
+                    newitem = qw.QTableWidgetItem(str(j))
+                    self.table.setItem(row, column, newitem)
+                else:
+                    empty = qw.QTableWidgetItem('')
+                    self.table.setItem(row, column, empty)
+                row = row + 1
+            column = column + 1
+                    
+
+        # adjust amount of columns in table
+        self.table.setColumnCount(len(column_header))
+
+        # add headers to table
+        self.table.setHorizontalHeaderLabels(column_header)    
     # ----------------------------------
         
     # Close Application (still needs work)
     # ----------------------------------
     def close(self):
-        qw.CoreApplication.instance().quit()
+        self.close()
     # ----------------------------------
 
+class Canvas(FigureCanvas):
+    """Ultimately, this is a QWidget (as well as a FigureCanvasAgg, etc.)."""
+
+    def __init__(self, parent=None, width=5, height=4, dpi=100):
+        fig = Figure(figsize=(width, height), dpi=dpi)
+        self.axes = fig.add_subplot(111)
+ 
+        FigureCanvas.__init__(self, fig)
+        self.setParent(parent)
+ 
+        FigureCanvas.setSizePolicy(self,
+                qw.QSizePolicy.Expanding,
+                qw.QSizePolicy.Expanding)
+        FigureCanvas.updateGeometry(self)
 
 App = qw.QApplication(sys.argv)
 W = GUI()
