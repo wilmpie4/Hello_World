@@ -12,8 +12,7 @@ import pandas as pd
 
     # imported classes for plotting
     # ----------------------------------
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
 
 
 # ------------------------------------------------- APPLICATION ------------------------------------------------- #
@@ -22,7 +21,7 @@ class GUI(qw.QMainWindow):
     # Add cls Variables here
     # ----------------------------------
     cnxn = odbc.connect("Driver={SQL Server Native Client 11.0};"
-                        "Server=############;"
+                        "Server=DESKTOP-D3UL9SD;"
                         "Database=Statistics;"
                         "Trusted_Connection=yes;")
 
@@ -60,35 +59,43 @@ class GUI(qw.QMainWindow):
         
         # file menu
         open_file = qw.QAction('Open File', self)
-        upload_file = qw.QAction('Upload File', self)
-        download_file = qw.QAction('Download File', self)
-        exit_gui = qw.QAction('Exit', self)
-
         file_menu.addAction(open_file)
         open_file.triggered.connect(self.open_csv) 
 
+        upload_file = qw.QAction('Upload File', self)
         file_menu.addAction(upload_file)
         upload_file.triggered.connect(self.upload_file)
-        
+
+        download_file = qw.QAction('Download File', self)        
         file_menu.addAction(download_file)
-        
+
+        exit_gui = qw.QAction('Exit', self)        
         file_menu.addAction(exit_gui)
         exit_gui.triggered.connect(self.close)
 
         # plot_menu
-        scatter_plot = qw.QAction('Scatter Plot', self)
         line_plot = qw.QAction('Line Plot', self)
-        plot_menu.addAction(scatter_plot)
         plot_menu.addAction(line_plot)
+        line_plot.triggered.connect(self.line_plot)
 
+        bar_plot = qw.QAction('Bar Plot', self)
+        plot_menu.addAction(bar_plot)
+        bar_plot.triggered.connect(self.bar_plot)
+        
+        scatter_plot = qw.QAction('Scatter Plot', self)
+        plot_menu.addAction(scatter_plot)
+        scatter_plot.triggered.connect(self.scatter_plot)
+        
         # statistics menu
         des  = qw.QAction('Descriptives', self)
         statistics_menu.addAction(des)
         
         regression_menu    = statistics_menu.addMenu('Regression')
+        
         single_var    = qw.QAction('Linear Regession', self)
-        multi_var     = qw.QAction('Linear Multivariate Regression', self)
         regression_menu.addAction(single_var)
+
+        multi_var     = qw.QAction('Linear Multivariate Regression', self)
         regression_menu.addAction(multi_var)
 
     # adding table to mainwindow
@@ -97,13 +104,6 @@ class GUI(qw.QMainWindow):
         self.table.setRowCount(5)
         self.table.setColumnCount(5)
         self.table.setGeometry(qc.QRect(20,55,500,450))
-
-    # adding table to mainwindow
-    # ----------------------------------
-        '''nothing yet '''
-        m = Canvas(self,width=5, height=4, dpi=100 )
-        m.move(540,55)
-    
 
     # adding dropdown with table in database
     # ----------------------------------
@@ -167,8 +167,7 @@ class GUI(qw.QMainWindow):
 
         else:
             'Nothing'
-    # ----------------------------------
-
+            
     # Upload File (still need to work on data types in pandas to give to sql server...)
     # ----------------------------------
     def upload_file(self):
@@ -193,8 +192,8 @@ class GUI(qw.QMainWindow):
             cursor.commit()
 
         for i in range(self.table.columnCount()):
+            cl_name = str(self.table.horizontalHeaderItem(i).text())
             for j in range(self.table.rowCount()):
-                cl_name = str(self.table.horizontalHeaderItem(i).text())
                 item = self.table.item(j,i).text()
                 sql_it = "Update [" + tb_name + "] set [" + cl_name + "] = " + "'" +   item +  "' where index_column = " + str(j)
                 cursor.execute(str(sql_it))
@@ -228,28 +227,71 @@ class GUI(qw.QMainWindow):
 
         # add headers to table
         self.table.setHorizontalHeaderLabels(column_header)    
-    # ----------------------------------
         
     # Close Application (still needs work)
     # ----------------------------------
     def close(self):
-        self.close()
+        pass
+
+    # Create dataframe from tablewidget
     # ----------------------------------
+    def df_table(self):
+        df_main = pd.DataFrame()
 
-class Canvas(FigureCanvas):
-    """Ultimately, this is a QWidget (as well as a FigureCanvasAgg, etc.)."""
+        for i in range(self.table.columnCount()):
+            cl_name = str(self.table.horizontalHeaderItem(i).text())
+            df_main[str(cl_name)] = 1
 
-    def __init__(self, parent=None, width=5, height=4, dpi=100):
-        fig = Figure(figsize=(width, height), dpi=dpi)
-        self.axes = fig.add_subplot(111)
- 
-        FigureCanvas.__init__(self, fig)
-        self.setParent(parent)
- 
-        FigureCanvas.setSizePolicy(self,
-                qw.QSizePolicy.Expanding,
-                qw.QSizePolicy.Expanding)
-        FigureCanvas.updateGeometry(self)
+        for i in range(self.table.columnCount()):
+            cl_name = str(self.table.horizontalHeaderItem(i).text())
+            for j in range(self.table.rowCount()):
+                item = self.table.item(j,i).text()
+                if i == 0:
+                    df_main = df_main.append({str(cl_name): str(item)}, ignore_index=True)
+                else:
+                    df_add = pd.DataFrame({cl_name: [item]}, index=[j])
+                    df_main.update(df_add)
+
+        return df_main
+
+    # lineplot
+    # ----------------------------------
+    def line_plot(self):
+        df_main = self.df_table()
+        plot = list(df_main.columns)
+
+        x_, okpressed = qw.QInputDialog.getItem(self, 'X Variable', 'Please name X variable:', plot)
+        y_, okpressed = qw.QInputDialog.getItem(self, 'Y Variable', 'Please name Y variable:', plot)
+        x = (list(df_main[str(x_)]))
+        y = (list(df_main[str(y_)]))
+        plt.plot(x , y)
+        plt.show()
+
+    # scatterplot
+    # ----------------------------------
+    def scatter_plot(self):
+        df_main = self.df_table()
+        plot = list(df_main.columns)
+
+        x_, okpressed = qw.QInputDialog.getItem(self, 'X Variable', 'Please name X variable:', plot)
+        y_, okpressed = qw.QInputDialog.getItem(self, 'Y Variable', 'Please name Y variable:', plot)
+        x = (list(df_main[str(x_)]))
+        y = (list(df_main[str(y_)]))
+        plt.scatter(x , y)
+        plt.show()
+
+    # barplot
+    # ----------------------------------
+    def bar_plot(self):
+        df_main = self.df_table()
+        plot = list(df_main.columns)
+
+        x_, okpressed = qw.QInputDialog.getItem(self, 'X Variable', 'Please name X variable:', plot)
+        y_, okpressed = qw.QInputDialog.getItem(self, 'Y Variable', 'Please name Y variable:', plot)
+        x = (list(df_main[str(x_)]))
+        y = (list(df_main[str(y_)]))
+        plt.scatter(x , y)
+        plt.show()
 
 App = qw.QApplication(sys.argv)
 W = GUI()
