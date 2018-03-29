@@ -21,7 +21,7 @@ class GUI(qw.QMainWindow):
     # Add cls Variables here
     # ----------------------------------
     cnxn = odbc.connect("Driver={SQL Server Native Client 11.0};"
-                        "Server=DESKTOP-D3UL9SD;"
+                        "Server=########;"
                         "Database=Statistics;"
                         "Trusted_Connection=yes;")
 
@@ -66,9 +66,6 @@ class GUI(qw.QMainWindow):
         file_menu.addAction(upload_file)
         upload_file.triggered.connect(self.upload_file)
 
-        download_file = qw.QAction('Download File', self)        
-        file_menu.addAction(download_file)
-
         exit_gui = qw.QAction('Exit', self)        
         file_menu.addAction(exit_gui)
         exit_gui.triggered.connect(self.close)
@@ -103,9 +100,9 @@ class GUI(qw.QMainWindow):
         self.table = qw.QTableWidget(self)
         self.table.setRowCount(5)
         self.table.setColumnCount(5)
-        self.table.setGeometry(qc.QRect(20,55,500,450))
+        self.table.setGeometry(qc.QRect(20,55,700,650))
 
-    # adding dropdown with table in database
+    # adding dropdown with table in database to mainwindow
     # ----------------------------------
         self.db_label = qw.QLabel(self)
         self.db_label.setText('Current Tables')
@@ -114,6 +111,15 @@ class GUI(qw.QMainWindow):
         self.qboxtable = qw.QComboBox(self)
         self.qboxtable.move(100,22)
         self.qboxtable.activated[str].connect(self.download_file)
+
+    # adding inputbox to mainwindow
+    # ----------------------------------
+        self.comt_label = qw.QLabel(self)
+        self.comt_label.setText('Please state comments and changes')
+        self.comt_label.setGeometry(750, 28, 200, 20)
+
+        self.comt = qw.QTextEdit(self)
+        self.comt.setGeometry(750,55,500,100)
 
     # visualizing GUI
     # ----------------------------------
@@ -168,7 +174,7 @@ class GUI(qw.QMainWindow):
         else:
             'Nothing'
             
-    # Upload File (still need to work on data types in pandas to give to sql server...)
+    # Upload File 
     # ----------------------------------
     def upload_file(self):
 
@@ -231,7 +237,7 @@ class GUI(qw.QMainWindow):
     # Close Application (still needs work)
     # ----------------------------------
     def close(self):
-        pass
+        sys.exit()
 
     # Create dataframe from tablewidget
     # ----------------------------------
@@ -245,13 +251,16 @@ class GUI(qw.QMainWindow):
         for i in range(self.table.columnCount()):
             cl_name = str(self.table.horizontalHeaderItem(i).text())
             for j in range(self.table.rowCount()):
-                item = self.table.item(j,i).text()
+                item = self.table.item(j,i).text()                  
                 if i == 0:
-                    df_main = df_main.append({str(cl_name): str(item)}, ignore_index=True)
+                    df_main = df_main.append({str(cl_name): item}, ignore_index=True)
+                elif item == '':
+                    'nothing'
                 else:
                     df_add = pd.DataFrame({cl_name: [item]}, index=[j])
                     df_main.update(df_add)
-
+                    
+        df_main = df_main.apply(pd.to_numeric, errors='ignore')
         return df_main
 
     # lineplot
@@ -290,7 +299,7 @@ class GUI(qw.QMainWindow):
         y_, okpressed = qw.QInputDialog.getItem(self, 'Y Variable', 'Please name Y variable:', plot)
         x = (list(df_main[str(x_)]))
         y = (list(df_main[str(y_)]))
-        plt.scatter(x , y)
+        plt.bar(x , y)
         plt.show()
 
 App = qw.QApplication(sys.argv)
