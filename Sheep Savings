@@ -21,7 +21,7 @@ class Login(qw.QWidget):
     # Add cls Variables here
     # ----------------------------------
     cnxn = odbc.connect("Driver={SQL Server Native Client 11.0};"
-                        "Server=DESKTOP-D3UL9SD;"
+                        "Server=###############;"
                         "Database=Sheep_Saving;"
                         "Trusted_Connection=yes;")
     # ----------------------------------
@@ -96,7 +96,7 @@ class GUI(qw.QMainWindow):
     # Add cls Variables here
     # ----------------------------------
     cnxn = odbc.connect("Driver={SQL Server Native Client 11.0};"
-                        "Server=DESKTOP-D3UL9SD;"
+                        "Server=#####################;"
                         "Database=Sheep_Saving;"
                         "Trusted_Connection=yes;")
 
@@ -134,12 +134,18 @@ class GUI(qw.QMainWindow):
         plot_menu = menubar.addMenu('Plot')
         table_menu = menubar.addMenu('Table')
         statistics_menu = menubar.addMenu('Statistics')
-
-        
+        connections_menu = menubar.addMenu('Connections')
+       
         # file menu
-        open_file = qw.QAction('Open File', self)
-        file_menu.addAction(open_file)
-        open_file.triggered.connect(self.open_csv) 
+        open_file = file_menu.addMenu('Open File')
+
+        open_csv = qw.QAction('Open CSV', self)
+        open_file.addAction(open_csv)
+        open_csv.triggered.connect(self.open_csv)
+
+        open_xml = qw.QAction('Open XML', self)
+        open_file.addAction(open_xml)
+        open_xml.triggered.connect(self.open_xml)
 
         upload_file = qw.QAction('Upload File', self)
         file_menu.addAction(upload_file)
@@ -167,9 +173,11 @@ class GUI(qw.QMainWindow):
 
         column_name = qw.QAction('Change Column Name', self)
         column_menu.addAction(column_name)
+        column_name.triggered.connect(self.column_name)
 
         add_column = qw.QAction('Add Column', self)
         column_menu.addAction(add_column)
+        add_column.triggered.connect(self.add_column)
 
         cal_column = qw.QAction('Calculated Column', self)
         column_menu.addAction(cal_column)
@@ -188,6 +196,16 @@ class GUI(qw.QMainWindow):
 
         multi_var     = qw.QAction('Linear Multivariate Regression', self)
         regression_menu.addAction(multi_var)
+
+        #connections menu
+        sql_db = qw.QAction('Connect to sql Db', self)
+        connections_menu.addAction(sql_db)
+
+        api_connect = qw.QAction('Connect to API', self)
+        connections_menu.addAction(api_connect)
+
+        python_connect = qw.QAction('Connect to Python with dataframe', self)
+        connections_menu.addAction(python_connect)
 
     # adding table to mainwindow
     # ----------------------------------
@@ -273,7 +291,43 @@ class GUI(qw.QMainWindow):
 
         else:
             'Nothing'
-            
+
+    # Open XML
+    # ----------------------------------
+    def open_xml(self):
+        pass
+    '''
+import xml.etree.ElementTree as ET
+import pandas as pd
+
+class XML2DataFrame:
+
+    def __init__(self, xml_data):
+        self.root = ET.XML(xml_data)
+
+    def parse_root(self, root):
+        return [self.parse_element(child) for child in iter(root)]
+
+    def parse_element(self, element, parsed=None):
+        if parsed is None:
+            parsed = dict()
+        for key in element.keys():
+            parsed[key] = element.attrib.get(key)
+        if element.text:
+            parsed[element.tag] = element.text
+        for child in list(element):
+            self.parse_element(child, parsed)
+        return parsed
+
+    def process_data(self):
+        structure_data = self.parse_root(self.root)
+        return pd.DataFrame(structure_data)
+
+xml2df = XML2DataFrame(xml_data)
+xml_dataframe = xml2df.process_data()
+'''
+
+    
     # Upload File 
     # ----------------------------------
     def upload_file(self):
@@ -288,9 +342,12 @@ class GUI(qw.QMainWindow):
 
         for i in range(self.table.columnCount()):
             cl_name = str(self.table.horizontalHeaderItem(i).text())
-            sql_cl = "Alter table [" + tb_name + "] Add [" + cl_name + "] varchar(255)"
-            cursor.execute(str(sql_cl))
-            cursor.commit()
+            if cl_name != 'index_column':
+                sql_cl = "Alter table [" + tb_name + "] Add [" + cl_name + "] varchar(255)"
+                cursor.execute(str(sql_cl))
+                cursor.commit()
+            else:
+                'Nothing'
 
         for i in range(self.table.rowCount()):
             sql_in = "insert into " + tb_name + "(index_column) values (" + str(i) + ")"
@@ -402,7 +459,45 @@ class GUI(qw.QMainWindow):
         plt.bar(x , y)
         plt.show()
 
+    # add column
+    # ----------------------------------
+    def add_column(self):
 
+        cl_list = []
+        for i in range(self.table.columnCount()):
+            cl_name = str(self.table.horizontalHeaderItem(i).text())
+            cl_list.append(cl_name)
+
+        new_name_, okpressed = qw.QInputDialog.getText(self, 'Column name', 'Please state column name:')
+        cl_list.append(new_name_)
+            
+        clm_cnt = self.table.columnCount()
+        self.table.setColumnCount(clm_cnt + 1)
+
+        self.table.setHorizontalHeaderLabels(cl_list)
+        
+
+    # change column name
+    # ----------------------------------
+    def column_name(self):
+        cl_list = []
+        for i in range(self.table.columnCount()):
+            cl_name = str(self.table.horizontalHeaderItem(i).text())
+            cl_list.append(cl_name)
+
+        column_, okpressed = qw.QInputDialog.getItem(self, 'List of Columns', 'Please select Column to change:', cl_list)
+        new_name_, okpressed = qw.QInputDialog.getText(self, 'Column name', 'Please state new name:')
+        
+        for (i, item) in enumerate(cl_list):
+            if item == column_:
+                cl_list[i] = new_name_
+
+        self.table.setHorizontalHeaderLabels(cl_list)    
+
+        
+
+
+        
 
 App = qw.QApplication(sys.argv)
 W = Login()
