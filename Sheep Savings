@@ -22,7 +22,7 @@ class Login(qw.QWidget):
     # Add cls Variables here
     # ----------------------------------
     cnxn = odbc.connect("Driver={SQL Server Native Client 11.0};"
-                        "Server=##############################;"
+                        "Server=####################;"
                         "Database=Sheep_Saving;"
                         "Trusted_Connection=yes;")
     # ----------------------------------
@@ -97,7 +97,7 @@ class GUI(qw.QMainWindow):
     # Add cls Variables here
     # ----------------------------------
     cnxn = odbc.connect("Driver={SQL Server Native Client 11.0};"
-                        "#####################################;"
+                        "Server=####################;"
                         "Database=Sheep_Saving;"
                         "Trusted_Connection=yes;")
 
@@ -252,7 +252,7 @@ class GUI(qw.QMainWindow):
         self.qboxin.move(600,22)
         self.qboxin.activated[str].connect(self.download_instance)
 
-    # adding inputbox to mainwindow
+    # adding inputbox with comments to mainwindow
     # ----------------------------------
         self.comt_label = qw.QLabel(self)
         self.comt_label.setText('Please state comments and changes')
@@ -475,11 +475,45 @@ xml_dataframe = xml2df.process_data()
     # ----------------------------------
     def upload_instance(self):
         df_main = self.df_table()
-        print(df_main)
 
-        inst_name = datetime.datetime.now()
-        inst_parent = self.qboxin.currentText()
-        inst_threat = self.qboxth.currentText()
+        inst_name = str(datetime.datetime.now())
+        inst_parent = str(self.qboxin.currentText())
+        inst_thread = str(self.qboxth.currentText())
+        inst_project = str(self.qboxproj.currentText())
+
+        sql = "with thread as (select th.thread_index from projects as pr \
+						 inner join threads as th on th.project_index = pr.project_index \
+						 where pr.project_name = '" + inst_project + "' \
+						 and   th.thread_name = '" + inst_thread + "') \
+	             ,inst as (select ins.instance_index from projects as pr \
+						 inner join threads as th on th.project_index = pr.project_index \
+						 inner join instance as ins on ins.thread_index = th.thread_index \
+						 where pr.project_name = '" + inst_project + "' \
+						 and   th.thread_name = '" + inst_thread + "' \
+						 and   ins.date_created = '" + inst_parent + "') \
+                                                 \
+             insert into instance (thread_index, date_created, instance_parent_index) \
+             Values ((select th.thread_index from thread as th),'"+ inst_name + "', (select inst.instance_index from inst as inst))"
+
+        cursor = GUI.cnxn.cursor()
+        cursor.execute(str(sql))
+        cursor.commit()
+
+        self.fill_qboxin(inst_thread)
+
+            # Upload comments still in previous def
+            # ----------------------------------
+        inst_comt = str(self.comt.toPlainText())
+
+        sql_com = "with inst_index as (select inst.instance_index from instance as inst \
+								  where inst.date_created = '" + inst_name + "') \
+                    \
+                    insert into instance_comments(instance_index, instance_comments_value) \
+                    values((select inst.instance_index from inst_index as inst),'" + inst_comt + "' )"
+        cursor = GUI.cnxn.cursor()
+        cursor.execute(str(sql_com))
+        cursor.commit()
+
 
 
     # Download Instance
@@ -516,6 +550,18 @@ xml_dataframe = xml2df.process_data()
                     df_main.update(df_add)
 
         self.create_table(df_main)
+
+            # dowload comments still in previous def
+            # ----------------------------------
+        sql_com = "select inst_com.instance_comments_value \
+		   from instance ins \
+		   inner join instance_comments as inst_com on ins.instance_index = inst_com.instance_index \
+		   where ins.date_created = '" + instance_name + "'"
+
+        df_com = pd.read_sql(sql_com, GUI.cnxn)
+        comment = str(df_com['instance_comments_value'][0])
+
+        self.comt.setPlainText(comment)
 
     # lineplot
     # ----------------------------------
