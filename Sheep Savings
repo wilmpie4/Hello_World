@@ -22,7 +22,7 @@ class Login(qw.QWidget):
     # Add cls Variables here
     # ----------------------------------
     cnxn = odbc.connect("Driver={SQL Server Native Client 11.0};"
-                        "Server=####################;"
+                        "Server=DESKTOP-D3UL9SD;"
                         "Database=Sheep_Saving;"
                         "Trusted_Connection=yes;")
     # ----------------------------------
@@ -97,7 +97,7 @@ class GUI(qw.QMainWindow):
     # Add cls Variables here
     # ----------------------------------
     cnxn = odbc.connect("Driver={SQL Server Native Client 11.0};"
-                        "Server=####################;"
+                        "Server=DESKTOP-D3UL9SD;"
                         "Database=Sheep_Saving;"
                         "Trusted_Connection=yes;")
 
@@ -474,8 +474,9 @@ xml_dataframe = xml2df.process_data()
     # Upload Instance
     # ----------------------------------
     def upload_instance(self):
-        df_main = self.df_table()
 
+            # Create new instance in instance table
+            # ----------------------------------
         inst_name = str(datetime.datetime.now())
         inst_parent = str(self.qboxin.currentText())
         inst_thread = str(self.qboxth.currentText())
@@ -501,6 +502,67 @@ xml_dataframe = xml2df.process_data()
 
         self.fill_qboxin(inst_thread)
 
+            # Create or update columns in instance_columns_table
+            # ----------------------------------
+        df_main = self.df_table()
+
+        column_header = list(df_main.columns)
+        print(column_header)
+        column = 0
+
+        
+        for i in column_header:
+            sql_column = "with inst as (select ins.instance_index from projects as pr \
+						 inner join threads as th on th.project_index = pr.project_index \
+						 inner join instance as ins on ins.thread_index = th.thread_index \
+						 where pr.project_name = '" + inst_project + "' \
+						 and   th.thread_name = '" + inst_thread + "' \
+						 and   ins.date_created = '" + inst_parent + "') \
+                  \
+                  select distinct case when '" + i + "_" + str(column) + "_' + convert(varchar(30), inst.instance_index) in (select  concat(column_name,'_',  column_location,'_', instance_updated) \
+                  FROM instance_columns as inst) then 'Yes' else 'No' end as Available from inst"
+            
+            df_column = pd.read_sql(sql_column, GUI.cnxn)
+            if df_column['Available'][0] == 'Yes':
+                sql_update = "with inst_updated as (select ins.instance_index from projects as pr \
+						 inner join threads as th on th.project_index = pr.project_index \
+						 inner join instance as ins on ins.thread_index = th.thread_index \
+						 where pr.project_name = '" + inst_project + "' \
+						 and   th.thread_name = '" + inst_thread + "' \
+						 and   ins.date_created = '" + inst_parent + "') \
+                             ,inst_created as (select ins.instance_index from projects as pr \
+						 inner join threads as th on th.project_index = pr.project_index \
+						 inner join instance as ins on ins.thread_index = th.thread_index \
+						 where pr.project_name = '" + inst_project + "' \
+						 and   th.thread_name = '" + inst_thread + "' \
+						 and   ins.date_created = '" + inst_name + "')\
+                            \
+                             update instance_columns\
+                                    set instance_updated = (select instance_index from inst_created) \
+                                    where instance_updated = (select instance_index from inst_updated) \
+                                    and column_name = '"+ i + "' \
+                                   and convert(varchar(30), column_location) = '"+ str(column) + "'"
+                cursor = GUI.cnxn.cursor()
+                cursor.execute(str(sql_update))
+                cursor.commit()
+            else:
+                sql_insert = "with inst_created as (select ins.instance_index from projects as pr \
+						 inner join threads as th on th.project_index = pr.project_index \
+						 inner join instance as ins on ins.thread_index = th.thread_index \
+						 where pr.project_name = '" + inst_project + "' \
+						 and   th.thread_name = '" + inst_thread + "' \
+						 and   ins.date_created = '" + inst_name + "')\
+                            \
+                            insert into instance_columns (column_name, column_location, instance_created, instance_updated)\
+                            values( '" + i + "', '" + str(column) + "' ,(select instance_index from inst_created), (select instance_index from inst_created))"
+                cursor = GUI.cnxn.cursor()
+                cursor.execute(str(sql_insert))
+                cursor.commit()
+            column = column + 1
+
+        
+
+
             # Upload comments still in previous def
             # ----------------------------------
         inst_comt = str(self.comt.toPlainText())
@@ -516,7 +578,7 @@ xml_dataframe = xml2df.process_data()
 
 
 
-    # Download Instance
+    # Download Instance (work max instance in thread!!!!)
     # ----------------------------------
     def download_instance(self, instance_name):
         sql_col_ins = "select col.column_name, col.instance_columns_index\
