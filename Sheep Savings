@@ -1,31 +1,27 @@
-    # imported classes for widget
-    # ----------------------------------
+# imported classes for widget
 import sys
 import datetime
 from PyQt5 import QtWidgets as qw
 from PyQt5 import QtGui as qg
 from PyQt5 import QtCore as qc
 
-    # imported classes for data
-    # ----------------------------------
+# imported classes for data
 import pyodbc as odbc
 import pandas as pd
 
-    # imported classes for plotting
-    # ----------------------------------
+# imported classes for plotting
 import matplotlib.pyplot as plt
 
 
 # ------------------------------------------------- LOGIN APPLICATION ------------------------------------------------- #
-class Login(qw.QWidget):
+class LOGIN(qw.QWidget):
     
     # Add cls Variables here
     # ----------------------------------
     cnxn = odbc.connect("Driver={SQL Server Native Client 11.0};"
-                        "Server=#################################;"
+                        "Server=######################;"
                         "Database=Sheep_Saving;"
                         "Trusted_Connection=yes;")
-    # ----------------------------------
 
     # Login Screen + start app
     # ----------------------------------
@@ -46,7 +42,6 @@ class Login(qw.QWidget):
 
     # Added items to login Screen
     # ----------------------------------
-
     def init_log(self, l):
 
         self.btn_ok = qw.QPushButton('Ok', self)
@@ -69,7 +64,6 @@ class Login(qw.QWidget):
         
         self.show()
 
-
     # Open main screen
     # ----------------------------------
     def btn_ok_func(self):
@@ -77,7 +71,7 @@ class Login(qw.QWidget):
         input_user = str(self.user_input.text())
         
         sql_user = ("select case when '" + user + "' in (select Password_ from User_Password) then 'Yes' else 'No' end as Check_ from User_Password")
-        df_user = pd.read_sql(sql_user, Login.cnxn)
+        df_user = pd.read_sql(sql_user, LOGIN.cnxn)
         if (df_user['Check_'][0]) == 'Yes':
             self.dialog = GUI(input_user)
             self.dialog.show()
@@ -85,28 +79,21 @@ class Login(qw.QWidget):
         else:
             'Nothing'
 
-
-
-
-
-
-
+            
 # ------------------------------------------------- MAIN APPLICATION ------------------------------------------------- #
 class GUI(qw.QMainWindow):
 
     # Add cls Variables here
     # ----------------------------------
     cnxn = odbc.connect("Driver={SQL Server Native Client 11.0};"
-                        "Server=#################################;"
+                        "Server=###########################;"
                         "Database=Sheep_Saving;"
                         "Trusted_Connection=yes;")
 
     sql_tb = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_CATALOG = 'Sheep_Saving'" 
-    # ----------------------------------
 
     # Main application + start app
     # ----------------------------------
-
     def __init__(self, user):
         qw.QMainWindow.__init__(self)
 
@@ -128,8 +115,7 @@ class GUI(qw.QMainWindow):
     # ----------------------------------
     def initUI(self):
 
-    # main menu
-    # ----------------------------------
+        # main menu
         menubar = self.menuBar()
         file_menu = menubar.addMenu('File')
         plot_menu = menubar.addMenu('Plot')
@@ -195,89 +181,71 @@ class GUI(qw.QMainWindow):
         # statistics menu
         des  = qw.QAction('Descriptives', self)
         statistics_menu.addAction(des)
-        
-        regression_menu    = statistics_menu.addMenu('Regression')
-        
+        regression_menu    = statistics_menu.addMenu('Regression')        
         single_var    = qw.QAction('Linear Regession', self)
         regression_menu.addAction(single_var)
-
         multi_var     = qw.QAction('Linear Multivariate Regression', self)
         regression_menu.addAction(multi_var)
 
         #connections menu
         sql_db = qw.QAction('Connect to sql Db', self)
         connections_menu.addAction(sql_db)
-
         api_connect = qw.QAction('Connect to API', self)
         connections_menu.addAction(api_connect)
-
         python_connect = qw.QAction('Connect to Python with dataframe', self)
         connections_menu.addAction(python_connect)
 
-    # adding table to mainwindow
-    # ----------------------------------
+        # adding table to mainwindow
         self.table = qw.QTableWidget(self)
         self.table.setRowCount(5)
         self.table.setColumnCount(5)
         self.table.setGeometry(qc.QRect(20,55,700,650))
 
-    # adding label with User
-    # ----------------------------------
+        # adding label with User
         self.user_label = qw.QLabel(self)
         self.user_label.setText('User: ' + self.user)
         self.user_label.move(20,22)
 
-    # adding dropdown with project
-    # ----------------------------------
+        # adding dropdown with project
         self.pr_label = qw.QLabel(self)
         self.pr_label.setText('Current Project')
         self.pr_label.move(100,22)
-
         self.qboxproj = qw.QComboBox(self)
         self.qboxproj.move(180,22)
         self.qboxproj.activated[str].connect(self.fill_qboxth)
         
-    # adding dropdown with threads
-    # ----------------------------------
+        # adding dropdown with threads
         self.th_label = qw.QLabel(self)
         self.th_label.setText('Current Thread')
         self.th_label.move(300,22)
-
         self.qboxth = qw.QComboBox(self)
         self.qboxth.move(380,22)
         self.qboxth.activated[str].connect(self.fill_qboxin)
 
-    # adding dropdown with instance 
-    # ----------------------------------
+        # adding dropdown with instance 
         self.in_label = qw.QLabel(self)
         self.in_label.setText('Current Instance')
         self.in_label.move(500,22)
-
         self.qboxin = qw.QComboBox(self)
         self.qboxin.move(600,22)
         self.qboxin.activated[str].connect(self.download_instance)
 
-    # adding inputbox with comments to mainwindow
-    # ----------------------------------
+        # adding inputbox with comments to mainwindow
         self.comt_label = qw.QLabel(self)
         self.comt_label.setText('Please state comments and changes')
         self.comt_label.setGeometry(750, 28, 200, 20)
-
         self.comt = qw.QTextEdit(self)
         self.comt.setGeometry(750,55,500,100)
 
-    # adding pushbutton to mainwindow for upload instance
-    # ----------------------------------
+        # adding pushbutton to mainwindow for upload instance
         self.upl_inst_btn = qw.QPushButton(self)
         self.upl_inst_btn.setText('Upload instance')
         self.upl_inst_btn.move(1000,22)
         self.upl_inst_btn.clicked.connect(self.upload_instance)
 
-    # visualizing GUI
-    # ----------------------------------
+        # visualizing GUI
         self.fill_qboxproj()
         self.show()
-    # ----------------------------------
 
     # Qboxtable with all projects in db
     # ----------------------------------
@@ -292,7 +260,6 @@ class GUI(qw.QMainWindow):
 
         for i in range(len(df_pr)):
             self.qboxproj.addItem(df_pr[i])            
-    # ----------------------------------
 
     # Qboxtable with all threads in project
     # ----------------------------------
@@ -309,14 +276,12 @@ class GUI(qw.QMainWindow):
 
         for i in range(len(df_th)):
             self.qboxth.addItem(df_th[i])
-    # ----------------------------------
 
     # Qboxtable with all instances in thread
     # ----------------------------------
     def fill_qboxin(self, thread):
         self.qboxin.clear()
         project = self.qboxproj.currentText()
-        
         sql_in = "select date_created\
                     from projects as pr\
                     inner join User_Password as us on us.User_index = pr.user_index\
@@ -325,21 +290,20 @@ class GUI(qw.QMainWindow):
                     where us.[User_name] = '" + str(self.user) + "'\
                     and pr.project_name = '" + str(project) + "'\
                     and th.thread_name = '" + str(thread) + "'"
-        
         df_in = pd.read_sql(sql_in, GUI.cnxn)
         df_in = df_in['date_created']
 
         for i in range(len(df_in)):
             self.qboxin.addItem(str(df_in[i]))
-    # ----------------------------------
-
+            
     # Create tablewidget from dataframe
     # ----------------------------------
     def create_table(self, df_main):
         column_header = list(df_main.columns)
         column = 0
         self.table.setColumnCount(df_main.shape[1]) 
-        self.table.setRowCount(df_main.shape[0]) 
+        self.table.setRowCount(df_main.shape[0])
+        
         for i in column_header:
             row = 0
             for j in df_main[i]:
@@ -351,11 +315,8 @@ class GUI(qw.QMainWindow):
                     self.table.setItem(row, column, empty)
                 row = row + 1
             column = column + 1
-                    
-
         # adjust amount of columns in table
         self.table.setColumnCount(len(column_header))
-
         # add headers to table
         self.table.setHorizontalHeaderLabels(column_header)
                 
@@ -383,7 +344,6 @@ class GUI(qw.QMainWindow):
         df_main = df_main.apply(pd.to_numeric, errors='ignore')
         return df_main
 
-
     # Open CSV
     # ----------------------------------
     def open_csv(self):
@@ -396,7 +356,6 @@ class GUI(qw.QMainWindow):
             df_csv = pd.read_csv(str(fp[0]))
             self.create_table(df_csv)
             
-
     # Open XML
     # ----------------------------------
     def open_xml(self):
@@ -466,27 +425,23 @@ xml_dataframe = xml2df.process_data()
                 cursor.execute(str(sql_it))
                 cursor.commit()
 
-
     # Download File
     # ----------------------------------
     def download_file(self, tb_name):
         sql_re = 'Select * from ' + tb_name
-        df_sql = pd.read_sql(sql_re, GUI.cnxn)
+        df_main = pd.read_sql(sql_re, GUI.cnxn)
 
-        self.create_table(df_sql)
+        self.create_table(df_main)
 # -------------------------------------------------  Will be Outfased ------------------------------------------------- #
 
     # Upload Instance
     # ----------------------------------
     def upload_instance(self):
-
-            # Create new instance in instance table
-            # ----------------------------------
+        # Create new instance in instance table
         inst_name = str(datetime.datetime.now())
         inst_parent = str(self.qboxin.currentText())
         inst_thread = str(self.qboxth.currentText())
         inst_project = str(self.qboxproj.currentText())
-
         sql = "with thread as (select th.thread_index from projects as pr \
 						 inner join threads as th on th.project_index = pr.project_index \
 						 where pr.project_name = '" + inst_project + "' \
@@ -500,21 +455,15 @@ xml_dataframe = xml2df.process_data()
                                                  \
              insert into instance (thread_index, date_created, instance_parent_index) \
              Values ((select th.thread_index from thread as th),'"+ inst_name + "', (select inst.instance_index from inst as inst))"
-
         cursor = GUI.cnxn.cursor()
         cursor.execute(str(sql))
         cursor.commit()
-
         self.fill_qboxin(inst_thread)
 
-            # Create or update columns in instance_columns_table
-            # ----------------------------------
+        # Create or update columns in instance_columns_table
         df_main = self.df_table()
-
         column_header = list(df_main.columns)
         column = 0
-
-        
         for i in column_header:
             sql_column = "with inst as (select ins.instance_index from projects as pr \
 						 inner join threads as th on th.project_index = pr.project_index \
@@ -523,9 +472,9 @@ xml_dataframe = xml2df.process_data()
 						 and   th.thread_name = '" + inst_thread + "' \
 						 and   ins.date_created = '" + inst_parent + "') \
                   \
-                  select distinct case when '" + i + "_" + str(column) + "_' + convert(varchar(30), inst.instance_index) in (select  concat(column_name,'_',  column_location,'_', instance_updated) \
-                  FROM instance_columns as inst) then 'Yes' else 'No' end as Available from inst"
-            
+                  select distinct case when '" + i + "_" + str(column) + "_' + convert(varchar(30), inst.instance_index) in (\
+                         select  concat(column_name,'_',  column_location,'_', instance_updated) \
+                         from instance_columns as inst) then 'Yes' else 'No' end as Available from inst"
             df_column = pd.read_sql(sql_column, GUI.cnxn)
             if df_column['Available'][0] == 'Yes':
                 sql_update = "with inst_updated as (select ins.instance_index from projects as pr \
@@ -540,7 +489,6 @@ xml_dataframe = xml2df.process_data()
 						 where pr.project_name = '" + inst_project + "' \
 						 and   th.thread_name = '" + inst_thread + "' \
 						 and   ins.date_created = '" + inst_name + "')\
-                            \
                              update instance_columns\
                                     set instance_updated = (select instance_index from inst_created) \
                                     where instance_updated = (select instance_index from inst_updated) \
@@ -558,15 +506,15 @@ xml_dataframe = xml2df.process_data()
 						 and   ins.date_created = '" + inst_name + "')\
                             \
                             insert into instance_columns (column_name, column_location, instance_created, instance_updated)\
-                            values( '" + i + "', '" + str(column) + "' ,(select instance_index from inst_created), (select instance_index from inst_created))"
+                            values( '" + i + "', '" + str(column) + "' ,(select instance_index from inst_created),\
+                                                                        (select instance_index from inst_created))"
                 print(sql_insert)
                 cursor = GUI.cnxn.cursor()
                 cursor.execute(str(sql_insert))
                 cursor.commit()
             column = column + 1
             
-            # Create or update items in instance_items_table
-            # ----------------------------------
+        # Create or update items in instance_items_table
         for i in column_header:
             df_update = df_main[str(i)]
             row = 0
@@ -574,7 +522,6 @@ xml_dataframe = xml2df.process_data()
             for j in df_update:
                 value = str(j)
                 row_number = str(row)
-
                 sql_item = "with inst_updated as (select ins.instance_index as inst_up from projects as pr \
 						 inner join threads as th on th.project_index = pr.project_index \
 						 inner join instance as ins on ins.thread_index = th.thread_index \
@@ -592,7 +539,6 @@ xml_dataframe = xml2df.process_data()
 							from column_index \
 							    ,inst_updated "
                 df_item = pd.read_sql(sql_item, GUI.cnxn)
-
                 if df_item['Available'][0] == 'Yes':
                       sql_item_update = "with inst_col_index as (select col.instance_columns_index as col_in from instance as inst \
                                                 inner join instance_columns as col on col.instance_updated = inst.instance_index \
@@ -633,17 +579,16 @@ xml_dataframe = xml2df.process_data()
 						and col.column_name = '" + column + "' ) \
                                                          \
                                       insert into instance_items (item_rownumber, item_value, instance_columns_index, instance_created, instance_updated) \
-                                      values ("+ row_number +","+ "'" + value + "'" + ", (select col_in from column_index),(select inst_cr from inst_created), (select inst_cr from inst_created))"        
+                                      values ("+ row_number +","+ "'" + value + "'" + ", \
+                                             (select col_in from column_index),(select inst_cr from inst_created), \
+                                             (select inst_cr from inst_created))"        
                     cursor = GUI.cnxn.cursor()
                     cursor.execute(str(sql_item_insert))
                     cursor.commit()
                 row = row + 1
-
                 
-            # Upload comments still in previous def
-            # ----------------------------------
+        # Upload comments still in previous def
         inst_comt = str(self.comt.toPlainText())
-
         sql_com = "with inst_index as (select inst.instance_index from instance as inst \
 								  where inst.date_created = '" + inst_name + "') \
                     \
@@ -652,8 +597,6 @@ xml_dataframe = xml2df.process_data()
         cursor = GUI.cnxn.cursor()
         cursor.execute(str(sql_com))
         cursor.commit()
-
-
 
     # Download Instance 
     # ----------------------------------
@@ -667,12 +610,11 @@ xml_dataframe = xml2df.process_data()
                                order by col.column_location"
         df_col = pd.read_sql(sql_col_ins, GUI.cnxn)
         list_col = list(df_col['column_name'])
-
         df_main = pd.DataFrame()
 
         for i in list_col:
             df_main[str(i)] = 1
-        
+
         for index, row in df_col.iterrows():
             sql_val_ins = "with current_instance as (select instance_index from instance as inst \
 								 where inst.date_created = '" + instance_name + "') \
@@ -685,7 +627,6 @@ xml_dataframe = xml2df.process_data()
                             and itm.instance_updated >= (select instance_index from current_instance) \
                             order by itm.item_rownumber"
             df_items = pd.read_sql(sql_val_ins, GUI.cnxn)
-        
             for index2, row2 in df_items.iterrows():
                 row_number = str(row2['item_rownumber'])
                 item = str(row2['item_value'])
@@ -696,20 +637,15 @@ xml_dataframe = xml2df.process_data()
                 else:
                     df_add = pd.DataFrame({column: [item]}, index=[int(row_number)])
                     df_main.update(df_add)
-
-
         self.create_table(df_main)
 
-            # dowload comments still in previous def
-            # ----------------------------------
+        # dowload comments still in previous def
         sql_com = "select inst_com.instance_comments_value \
 		   from instance ins \
 		   inner join instance_comments as inst_com on ins.instance_index = inst_com.instance_index \
 		   where ins.date_created = '" + instance_name + "'"
-
         df_com = pd.read_sql(sql_com, GUI.cnxn)
         comment = str(df_com['instance_comments_value'][0])
-
         self.comt.setPlainText(comment)
 
     # lineplot
@@ -717,7 +653,6 @@ xml_dataframe = xml2df.process_data()
     def line_plot(self):
         df_main = self.df_table()
         plot = list(df_main.columns)
-
         x_, okpressed = qw.QInputDialog.getItem(self, 'X Variable', 'Please name X variable:', plot)
         y_, okpressed = qw.QInputDialog.getItem(self, 'Y Variable', 'Please name Y variable:', plot)
         x = (list(df_main[str(x_)]))
@@ -730,7 +665,6 @@ xml_dataframe = xml2df.process_data()
     def scatter_plot(self):
         df_main = self.df_table()
         plot = list(df_main.columns)
-
         x_, okpressed = qw.QInputDialog.getItem(self, 'X Variable', 'Please name X variable:', plot)
         y_, okpressed = qw.QInputDialog.getItem(self, 'Y Variable', 'Please name Y variable:', plot)
         x = (list(df_main[str(x_)]))
@@ -743,7 +677,6 @@ xml_dataframe = xml2df.process_data()
     def bar_plot(self):
         df_main = self.df_table()
         plot = list(df_main.columns)
-
         x_, okpressed = qw.QInputDialog.getItem(self, 'X Variable', 'Please name X variable:', plot)
         y_, okpressed = qw.QInputDialog.getItem(self, 'Y Variable', 'Please name Y variable:', plot)
         x = (list(df_main[str(x_)]))
@@ -754,27 +687,22 @@ xml_dataframe = xml2df.process_data()
     # add column
     # ----------------------------------
     def add_column(self):
-
         cl_list = []
+        
         for i in range(self.table.columnCount()):
             cl_name = str(self.table.horizontalHeaderItem(i).text())
             cl_list.append(cl_name)
 
         new_name_, okpressed = qw.QInputDialog.getText(self, 'Column name', 'Please state column name:')
         cl_list.append(new_name_)
-            
         clm_cnt = self.table.columnCount()
         self.table.setColumnCount(clm_cnt + 1)
-
         self.table.setHorizontalHeaderLabels(cl_list)
 
     # add rows
     # ----------------------------------
     def add_row(self):
-
         row_count_, okpressed = qw.QInputDialog.getText(self, 'Add Row', 'Please state amount of rows you would like to add:')
-
-        print(row_count_)
         
         for i in range(int(row_count_)):
             rowPosition = self.table.rowCount()
@@ -801,7 +729,8 @@ xml_dataframe = xml2df.process_data()
     # ----------------------------------
     def calculated_column(self):
         df = self.df_table()
-        cal_column_, okpressed = qw.QInputDialog.getText(self, 'Calculated Column', "Please state calculated column: df['columnname'] = df['col_name'] + df['col_name']:")
+        cal_column_, okpressed = qw.QInputDialog.getText(self, 'Calculated Column',
+                                                         "Please state calculated column: df['columnname'] = df['col_name'] + df['col_name']:")
         #exec(cal_column_)
         print(cal_column_)
 
@@ -811,5 +740,5 @@ xml_dataframe = xml2df.process_data()
         sys.exit()
 
 App = qw.QApplication(sys.argv)
-W = Login()
+W = LOGIN()
 sys.exit(App.exec)
