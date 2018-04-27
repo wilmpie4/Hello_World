@@ -22,7 +22,7 @@ class Login(qw.QWidget):
     # Add cls Variables here
     # ----------------------------------
     cnxn = odbc.connect("Driver={SQL Server Native Client 11.0};"
-                        "Server=DESKTOP-D3UL9SD;"
+                        "Server=#################################;"
                         "Database=Sheep_Saving;"
                         "Trusted_Connection=yes;")
     # ----------------------------------
@@ -97,7 +97,7 @@ class GUI(qw.QMainWindow):
     # Add cls Variables here
     # ----------------------------------
     cnxn = odbc.connect("Driver={SQL Server Native Client 11.0};"
-                        "Server=DESKTOP-D3UL9SD;"
+                        "Server=#################################;"
                         "Database=Sheep_Saving;"
                         "Trusted_Connection=yes;")
 
@@ -183,6 +183,11 @@ class GUI(qw.QMainWindow):
         cal_column = qw.QAction('Calculated Column', self)
         column_menu.addAction(cal_column)
         cal_column.triggered.connect(self.calculated_column)
+
+        row_menu = table_menu.addMenu('Rows')
+        add_row = qw.QAction('Add Rows', self)
+        row_menu.addAction(add_row)
+        add_row.triggered.connect(self.add_row)
 
         group_by = qw.QAction('Group By', self)
         table_menu.addAction(group_by)
@@ -507,7 +512,6 @@ xml_dataframe = xml2df.process_data()
         df_main = self.df_table()
 
         column_header = list(df_main.columns)
-        print(column_header)
         column = 0
 
         
@@ -555,14 +559,87 @@ xml_dataframe = xml2df.process_data()
                             \
                             insert into instance_columns (column_name, column_location, instance_created, instance_updated)\
                             values( '" + i + "', '" + str(column) + "' ,(select instance_index from inst_created), (select instance_index from inst_created))"
+                print(sql_insert)
                 cursor = GUI.cnxn.cursor()
                 cursor.execute(str(sql_insert))
                 cursor.commit()
             column = column + 1
+            
+            # Create or update items in instance_items_table
+            # ----------------------------------
+        for i in column_header:
+            df_update = df_main[str(i)]
+            row = 0
+            column = str(i)
+            for j in df_update:
+                value = str(j)
+                row_number = str(row)
 
-        
+                sql_item = "with inst_updated as (select ins.instance_index as inst_up from projects as pr \
+						 inner join threads as th on th.project_index = pr.project_index \
+						 inner join instance as ins on ins.thread_index = th.thread_index \
+						 where pr.project_name = '" + inst_project + "' \
+						 and   th.thread_name = '" + inst_thread + "' \
+						 and   ins.date_created = '" + inst_parent + "') \
+                           ,column_index as (select col.instance_columns_index as col_in from instance as inst \
+						inner join instance_columns as col on col.instance_updated = inst.instance_index \
+						where inst.date_created = '" + inst_name + "' \
+						and col.column_name = '" + column + "' ) \
+                            \
+                            select case when concat('"+ row_number  + value + "', col_in, inst_up) in( \
+                            select concat(item_rownumber, item_value, instance_columns_index, instance_updated) \
+                            from instance_items) then 'Yes' else 'No' end as Available \
+							from column_index \
+							    ,inst_updated "
+                df_item = pd.read_sql(sql_item, GUI.cnxn)
 
+                if df_item['Available'][0] == 'Yes':
+                      sql_item_update = "with inst_col_index as (select col.instance_columns_index as col_in from instance as inst \
+                                                inner join instance_columns as col on col.instance_updated = inst.instance_index \
+						where inst.date_created = '" + inst_name + "' \
+						and col.column_name = '" + column + "' ) \
+                                              ,inst_created as (select ins.instance_index as inst_cr from projects as pr \
+						 inner join threads as th on th.project_index = pr.project_index \
+						 inner join instance as ins on ins.thread_index = th.thread_index \
+						 where pr.project_name = '" + inst_project + "' \
+						 and   th.thread_name = '" + inst_thread + "' \
+						 and   ins.date_created = '" + inst_name + "')\
+                                              ,inst_updated as (select ins.instance_index as inst_up from projects as pr \
+						 inner join threads as th on th.project_index = pr.project_index \
+						 inner join instance as ins on ins.thread_index = th.thread_index \
+						 where pr.project_name = '" + inst_project + "' \
+						 and   th.thread_name = '" + inst_thread + "' \
+						 and   ins.date_created = '" + inst_parent + "') \
+                                                \
+                                                update instance_items \
+                                                set instance_updated = (select * from inst_created)\
+                                                where item_value ='"+  value + "' \
+                                                and   item_rownumber = "+ row_number +"  \
+                                                and   instance_columns_index = (select * from inst_col_index) \
+                                                and   instance_updated = (select * from inst_updated)"
+                      cursor = GUI.cnxn.cursor()
+                      cursor.execute(str(sql_item_update))
+                      cursor.commit()
+                else:
+                    sql_item_insert = "with inst_created as (select ins.instance_index as inst_cr from projects as pr \
+						 inner join threads as th on th.project_index = pr.project_index \
+						 inner join instance as ins on ins.thread_index = th.thread_index \
+						 where pr.project_name = '" + inst_project + "' \
+						 and   th.thread_name = '" + inst_thread + "' \
+						 and   ins.date_created = '" + inst_name + "') \
+                           ,column_index as (select col.instance_columns_index as col_in from instance as inst \
+						inner join instance_columns as col on col.instance_updated = inst.instance_index \
+						where inst.date_created = '" + inst_name + "' \
+						and col.column_name = '" + column + "' ) \
+                                                         \
+                                      insert into instance_items (item_rownumber, item_value, instance_columns_index, instance_created, instance_updated) \
+                                      values ("+ row_number +","+ "'" + value + "'" + ", (select col_in from column_index),(select inst_cr from inst_created), (select inst_cr from inst_created))"        
+                    cursor = GUI.cnxn.cursor()
+                    cursor.execute(str(sql_item_insert))
+                    cursor.commit()
+                row = row + 1
 
+                
             # Upload comments still in previous def
             # ----------------------------------
         inst_comt = str(self.comt.toPlainText())
@@ -578,14 +655,16 @@ xml_dataframe = xml2df.process_data()
 
 
 
-    # Download Instance (work max instance in thread!!!!)
+    # Download Instance 
     # ----------------------------------
     def download_instance(self, instance_name):
-        sql_col_ins = "select col.column_name, col.instance_columns_index\
-                       from instance as ins\
-                       inner join instance_columns as col on ins.instance_index = col.instance_updated\
-                       where ins.date_created = '" + instance_name +  "'\
-                       order by col.column_location"
+        sql_col_ins = "with current_instance as (select instance_index from instance as inst\
+								 where inst.date_created = '" + instance_name + "')\
+                        \
+                        select col.column_name, col.column_location, col.instance_columns_index  from instance_columns as col\
+                               where col.instance_created <= (select instance_index from current_instance)\
+                               and   col.instance_updated >= (select instance_index from current_instance)\
+                               order by col.column_location"
         df_col = pd.read_sql(sql_col_ins, GUI.cnxn)
         list_col = list(df_col['column_name'])
 
@@ -593,23 +672,31 @@ xml_dataframe = xml2df.process_data()
 
         for i in list_col:
             df_main[str(i)] = 1
-
+        
         for index, row in df_col.iterrows():
-            sql_val_ins = "select itm.item_value, itm.instance_rownumber\
-                                  from instance_columns as col\
-                                  inner join instance_items  as itm on itm.instance_col_updated = col.instance_columns_index\
-                                  where col.instance_columns_index =" + str(row['instance_columns_index']) 
+            sql_val_ins = "with current_instance as (select instance_index from instance as inst \
+								 where inst.date_created = '" + instance_name + "') \
+                            \
+                            select itm.item_value, itm.item_rownumber \
+                            from instance_columns as col\
+                            inner join instance_items  as itm on itm.instance_columns_index = col.instance_columns_index \
+                            where col.instance_columns_index =" + str(row['instance_columns_index'])+" \
+                            and itm.instance_created  <= (select instance_index from current_instance) \
+                            and itm.instance_updated >= (select instance_index from current_instance) \
+                            order by itm.item_rownumber"
             df_items = pd.read_sql(sql_val_ins, GUI.cnxn)
+        
             for index2, row2 in df_items.iterrows():
-                row_number = str(row2['instance_rownumber'])
+                row_number = str(row2['item_rownumber'])
                 item = str(row2['item_value'])
                 column = str(row['column_name'])
-                column_number = str(row['instance_columns_index'])
-                if column_number == '1':
+                column_number = str(row['column_location'])
+                if column_number == '0':
                     df_main = df_main.append({column: item}, ignore_index=True)
                 else:
                     df_add = pd.DataFrame({column: [item]}, index=[int(row_number)])
                     df_main.update(df_add)
+
 
         self.create_table(df_main)
 
@@ -680,7 +767,18 @@ xml_dataframe = xml2df.process_data()
         self.table.setColumnCount(clm_cnt + 1)
 
         self.table.setHorizontalHeaderLabels(cl_list)
+
+    # add rows
+    # ----------------------------------
+    def add_row(self):
+
+        row_count_, okpressed = qw.QInputDialog.getText(self, 'Add Row', 'Please state amount of rows you would like to add:')
+
+        print(row_count_)
         
+        for i in range(int(row_count_)):
+            rowPosition = self.table.rowCount()
+            self.table.insertRow(rowPosition)
 
     # change column name
     # ----------------------------------
@@ -713,5 +811,5 @@ xml_dataframe = xml2df.process_data()
         sys.exit()
 
 App = qw.QApplication(sys.argv)
-W = GUI('willem')
+W = Login()
 sys.exit(App.exec)
