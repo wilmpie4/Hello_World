@@ -8,9 +8,18 @@ from PyQt5 import QtCore as qc
 # imported classes for data
 import pyodbc as odbc
 import pandas as pd
+import numpy as np
 
 # imported classes for plotting
 import matplotlib.pyplot as plt
+
+#regression
+# creating training and test data
+from sklearn.model_selection import train_test_split as tts
+# fitting simple regression to training set
+from sklearn.linear_model import LinearRegression 
+# quality of error and machine
+from sklearn import metrics  
 
 
 # ------------------------------------------------- LOGIN APPLICATION ------------------------------------------------- #
@@ -19,7 +28,7 @@ class LOGIN(qw.QWidget):
     # Add cls Variables here
     # ----------------------------------
     cnxn = odbc.connect("Driver={SQL Server Native Client 11.0};"
-                        "Server=######################;"
+                        "Server=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx;"
                         "Database=Sheep_Saving;"
                         "Trusted_Connection=yes;")
 
@@ -86,7 +95,7 @@ class GUI(qw.QMainWindow):
     # Add cls Variables here
     # ----------------------------------
     cnxn = odbc.connect("Driver={SQL Server Native Client 11.0};"
-                        "Server=###########################;"
+                        "Server=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx;"
                         "Database=Sheep_Saving;"
                         "Trusted_Connection=yes;")
 
@@ -184,6 +193,7 @@ class GUI(qw.QMainWindow):
         regression_menu    = statistics_menu.addMenu('Regression')        
         single_var    = qw.QAction('Linear Regession', self)
         regression_menu.addAction(single_var)
+        single_var.triggered.connect(self.Open_LIN_REG)
         multi_var     = qw.QAction('Linear Multivariate Regression', self)
         regression_menu.addAction(multi_var)
 
@@ -200,6 +210,7 @@ class GUI(qw.QMainWindow):
         self.table.setRowCount(5)
         self.table.setColumnCount(5)
         self.table.setGeometry(qc.QRect(20,55,700,650))
+        self.table.cellClicked.connect(self.cell_was_clicked)
 
         # adding label with User
         self.user_label = qw.QLabel(self)
@@ -242,6 +253,15 @@ class GUI(qw.QMainWindow):
         self.upl_inst_btn.setText('Upload instance')
         self.upl_inst_btn.move(1000,22)
         self.upl_inst_btn.clicked.connect(self.upload_instance)
+
+        #labels for descriptive data 
+        self.data_type_label = qw.QLabel(self)
+        self.std_label = qw.QLabel(self)
+        self.max_label = qw.QLabel(self)
+        self.min_label = qw.QLabel(self)
+        self.sum_label = qw.QLabel(self)
+        self.avg_label = qw.QLabel(self)
+        self.cnt_label = qw.QLabel(self)
 
         # visualizing GUI
         self.fill_qboxproj()
@@ -734,11 +754,200 @@ xml_dataframe = xml2df.process_data()
         #exec(cal_column_)
         print(cal_column_)
 
+    # cell values such as column avg etc....
+    # ----------------------------------
+    def cell_was_clicked(self, row, column):
+        df_desc = pd.DataFrame()
+        cl_name = str(self.table.horizontalHeaderItem(column).text())
+        df_desc[str(cl_name)] = 1
+
+
+        for j in range(self.table.rowCount()):
+            item = self.table.item(j,column).text()
+            if item != '':
+                df_desc = df_desc.append({str(cl_name): item}, ignore_index=True)
+
+        df_desc = df_desc.apply(pd.to_numeric, errors='ignore')
+        data_type = str(list(df_desc.dtypes)[0])
+
+        self.data_type_label.setText('Data Type: ' + data_type)
+        self.data_type_label.setGeometry(750, 200, 200, 20)
+        self.data_type_label.show()
+
+        if data_type in ('float64', 'int64'):
+            avg_data = str(df_desc[df_desc.columns[0]].mean())
+            self.avg_label.setText('Mean data: ' + avg_data)
+            self.avg_label.setGeometry(750, 220, 200, 20)
+            self.avg_label.show()
+
+            cnt_data = str(df_desc[df_desc.columns[0]].count())
+            self.cnt_label.setText('Count data: ' + cnt_data )
+            self.cnt_label.setGeometry(750, 240, 200, 20)
+            self.cnt_label.show()
+
+            sum_data = str(df_desc[df_desc.columns[0]].sum())
+            self.sum_label.setText('Sum data: ' + sum_data )
+            self.sum_label.setGeometry(750, 260, 200, 20)
+            self.sum_label.show()
+
+            max_data = str(df_desc[df_desc.columns[0]].max())
+            self.max_label.setText('Max data: ' + max_data )
+            self.max_label.setGeometry(750, 280, 200, 20)
+            self.max_label.show()
+
+            min_data = str(df_desc[df_desc.columns[0]].min())
+            self.min_label.setText('Min data: ' + min_data )
+            self.min_label.setGeometry(750, 300, 200, 20)
+            self.min_label.show()
+
+            std_data = str(df_desc[df_desc.columns[0]].std())
+            self.std_label.setText('Std data: ' + std_data )
+            self.std_label.setGeometry(750, 320, 200, 20)
+            self.std_label.show()
+
+        else:
+            self.std_label.setText('')
+            self.std_label.show()
+
+            self.min_label.setText('')
+            self.min_label.show()
+
+            self.max_label.setText('')
+            self.max_label.show()
+
+            self.sum_label.setText('')
+            self.sum_label.show()
+
+            self.avg_label.setText('')
+            self.avg_label.show()
+
+            self.cnt_label.setText('')
+            self.cnt_label.show()
+
+    # Close Application
+    # ----------------------------------
+    def Open_LIN_REG(self):
+        df_main = self.df_table()
+        self.dialog = LIN_REG(df_main)
+        self.dialog.show()
+
     # Close Application
     # ----------------------------------
     def close(self):
         sys.exit()
 
+# ------------------------------------------------- LINEAR REGRESSION WINDOW ------------------------------------------------- #
+class LIN_REG(qw.QWidget):
+
+    # Regression Window 
+    # ----------------------------------
+    def __init__(self, df_main):
+        super().__init__()
+
+        l = qw.QGridLayout(self)
+
+        self.title = 'Linear Regression Sheep Savings'
+        self.top = 300
+        self.left = 300
+        self.width = 500
+        self.height = 500
+        self.df_main = df_main
+        
+        self.setWindowTitle(self.title)
+        self.setGeometry(self.top,self.left,self.width,self.height)
+        self.init_lin_reg(l)
+
+    # Added items to login Screen
+    # ----------------------------------
+    def init_lin_reg(self, l):
+        self.btn_exe = qw.QPushButton('Execute Linear Regression', self)
+        l.addWidget(self.btn_exe ,0,1)
+        self.btn_exe.clicked.connect(self.linear_regression)
+
+        self.qbox_x = qw.QComboBox(self)
+        l.addWidget(self.qbox_x ,0,0)
+
+        self.qbox_y = qw.QComboBox(self)
+        l.addWidget(self.qbox_y, 1,0)
+
+        # visualizing GUI
+        self.fill_qbox_x()
+        self.fill_qbox_y()
+        self.show()
+        
+    # Filling qbox_x
+    # ----------------------------------
+    def fill_qbox_x(self):
+        self.qbox_x.clear()
+
+        columns = list(self.df_main.columns.values)
+        
+        for i in range(len(columns)):
+            self.qbox_x.addItem(str(columns[i]))
+
+    # Filling qbox_y
+    # ----------------------------------
+    def fill_qbox_y(self):
+        self.qbox_y.clear()
+
+        columns = list(self.df_main.columns.values)
+        
+        for i in range(len(columns)):
+            self.qbox_y.addItem(str(columns[i]))
+            
+    # Added items to login Screen
+    # ----------------------------------
+    def linear_regression(self):
+        df_regression = self.df_main
+
+        x_column = self.qbox_x.currentText()
+        y_column = self.qbox_y.currentText()
+
+        df_x = df_regression[str(x_column)]
+        print(df_x)
+
+        x = np.array([])
+        print(x)
+        for i in df_x:
+            print(str(df_x))
+        print(x)
+        
+        df_y = df_regression[str(y_column)].values
+
+
+        # creating training and test data
+        x_train, x_test, y_train, y_test = tts(x,y, test_size = 0.2, random_state = 0)
+
+
+        # fitting simple regression to training set
+        r = LinearRegression()
+        r.fit(x_train, y_train)
+
+
+        # Prediting the Test set results
+        y_pred = r.predict(x_test)
+
+
+        #values of intercept and coefficient
+        print(r.intercept_)
+        print(r.coef_)
+
+        # quality of error and machine
+        print('Mean Absolute Error:', metrics.mean_absolute_error(y_test, y_pred))  
+        print('Mean Squared Error:', metrics.mean_squared_error(y_test, y_pred))  
+        print('Root Mean Squared Error:', np.sqrt(metrics.mean_squared_error(y_test, y_pred)))
+
+
+        # Plotting the training results
+        plt.scatter(x_train, y_train, color = 'red')
+        plt.plot(x_train, r.predict(x_train), color = 'blue')
+        plt.title('First linear regression')
+        plt.xlabel('x')
+        plt.ylabel('y')
+        plt.show()
+
+
+# ------------------------------------------------- START APP ------------------------------------------------- #            
 App = qw.QApplication(sys.argv)
-W = LOGIN()
+W = GUI('willem')
 sys.exit(App.exec)
