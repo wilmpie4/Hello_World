@@ -1,1 +1,6 @@
-the app in this repo functions as a BI tool. In which only changes in data will be saved but you can see your history because of the way the data is saved. Furthermore there are some statistical features which need to be further developed.
+Hi guys,
+
+i've generated a pyqt app which grasps upon a ms sql table. It also contains possibilities to plot, update or delete the data. Furthermore
+only changes are saved on the sql server.
+
+I'm still working on statistical and ai possibilities such as sklearn. The app still needs a lot of tweeking :)
